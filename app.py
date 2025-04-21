@@ -7,6 +7,7 @@ import io
 import os
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -19,9 +20,9 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Load EigenPlaces model
 def load_eigenplaces_model():
     model = torch.hub.load("gmberton/eigenplaces", "get_trained_model", backbone="ResNet18", fc_output_dim=512)
-    num_classes = 301  # Adjust as per fine-tuned model
-    model.aggregation[3] = nn.Linear(in_features=512, out_features=num_classes)
-    state_dict = torch.load("best_model(96.55%).pth", map_location=torch.device('cpu'))
+    num_classes = 251  # Adjust as per fine-tuned model
+    model.aggregation[3] = nn.Linear(in_features=2048, out_features=num_classes)
+    state_dict = torch.load("best_model95.59%.pth", map_location=torch.device('cpu'))
     model.load_state_dict(state_dict)
     model.eval()
     return model
@@ -76,11 +77,21 @@ def predict():
         filename = secure_filename(file.filename)
         save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         image.save(save_path)
+
+
+        WIKIPEDIA_API_URL = "https://en.wikipedia.org/api/rest_v1/page/summary/"
+        wiki_response = ""
+        response = requests.get(WIKIPEDIA_API_URL + predicted_class.replace(" ", "_"))
+        if response.status_code == 200:
+            wiki_response = response.json().get("extract")
+        else:
+            wiki_response = "Failed to fetch data from Wikipedia."
         
         return jsonify({
             'prediction': predicted_class,
             'confidence': f"{confidence*100:.2f}%",
-            'image_url': f'/Uploads/{filename}'
+            'image_url': f'/Uploads/{filename}',
+            'Wiki_response': wiki_response
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
