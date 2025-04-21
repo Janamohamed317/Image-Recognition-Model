@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+.git/
+'best_model(96.55%).pth'
